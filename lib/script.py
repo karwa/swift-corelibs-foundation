@@ -70,6 +70,10 @@ PREFIX                = """ + Configuration.current.prefix + """
             base_flags += """
 SYSROOT               = """ + Configuration.current.system_root.absolute() + """
 """
+        if Configuration.current.linker is not None:
+            base_flags += """
+FUSE_LD               = """ + Configuration.current.linker + """
+"""
         base_flags += """
 SRCROOT               = """ + Configuration.current.source_root.relative() + """
 BINUTILS_VERSION      = 4.8
@@ -104,6 +108,8 @@ TARGET_CFLAGS         = -fcolor-diagnostics -fdollars-in-identifiers -fblocks -f
             swift_flags += "-target ${SWIFT_TARGET} "
         if Configuration.current.system_root is not None:
             swift_flags += "-sdk ${SYSROOT} "
+        if Configuration.current.swift_sdk is not None:
+            swift_flags += "-resource-dir ${SWIFT_SDKROOT}/lib/swift "
 
         if Configuration.current.bootstrap_directory is not None:
             swift_flags += """  -I${BOOTSTRAP_DIR}/usr/include -I${BOOTSTRAP_DIR}/usr/local/include """
@@ -137,9 +143,17 @@ TARGET_LDFLAGS       = --target=${TARGET} ${EXTRA_LD_FLAGS} -L${SWIFT_SDKROOT}/l
         if Configuration.current.bootstrap_directory is not None:
             ld_flags += """ -L${TARGET_BOOTSTRAP_DIR}/usr/lib"""
 
+        if Configuration.current.linker is not None:
+            ld_flags += """-fuse-ld=${FUSE_LD} """
+
         if Configuration.current.toolchain is not None:
-            c_flags += " -B" + Configuration.current.toolchain.path_by_appending("bin").relative()
-            ld_flags += " -B" + Configuration.current.toolchain.path_by_appending("bin").relative()
+            toolchain_path = Configuration.current.toolchain
+            if not str(toolchain_path.basename()) == "bin" and not str(toolchain_path.parent()) == "bin":
+                toolchain_path = toolchain_path.path_by_appending("bin").relative()
+            else:
+                toolchain_path = toolchain_path.relative()
+            c_flags += " -B" + toolchain_path
+            ld_flags += " -B" + toolchain_path
 
         c_flags += "\n"
         swift_flags += "\n"
